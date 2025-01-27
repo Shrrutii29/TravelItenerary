@@ -77,11 +77,7 @@ if st.button("Generate Itinerary"):
             )
             refined_inputs = refinement_response.generations[0].text.strip()
 
-        st.subheader("Refined Inputs")
-        st.write(refined_inputs)
-
-        # Proceed with Itinerary Generation
-        st.subheader("Generating Itinerary")
+        # Itinerary Generation
         chunk_size = 5
         num_chunks = (trip_duration // chunk_size) + (1 if trip_duration % chunk_size != 0 else 0)
         itinerary = []
@@ -104,22 +100,20 @@ if st.button("Generate Itinerary"):
                 - Avoid {avoid_areas} if specified.
                 """
 
-                # Generate response using Cohere
+                # Generate response
                 response = co.generate(
                     model='command-xlarge-nightly',
                     prompt=itinerary_prompt,
-                    max_tokens=1000,
                     temperature=0.7,
                 )
 
                 # Append chunk to the full itinerary
                 itinerary.append(f"### Days {start_day}-{end_day}:\n" + response.generations[0].text.strip())
 
-        # Display the final itinerary
+        # Display final itinerary
         st.header("Your Personalized Itinerary")
         for chunk_text in itinerary:
             st.write(chunk_text)
 
     except Exception as e:
-        # Display errors
         st.error(f"An error occurred while generating the itinerary: {e}")
