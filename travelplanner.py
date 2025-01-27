@@ -45,6 +45,10 @@ if not budget:
     warnings.append("Please specify your budget.")
 if not trip_type:
     warnings.append("Please select a trip type.")
+if accommodation == "Luxury" and budget == "Low":
+    warnings.append("Your selected accommodation preference (Luxury) might not align with a low budget. Please reconsider.")
+if not dietary_preferences and mobility == "High Tolerance":
+    warnings.append("Consider specifying dietary preferences if you have special requirements.")
 
 # Display warnings
 if warnings:
