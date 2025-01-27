@@ -36,14 +36,15 @@ avoid_areas = st.text_input("Areas to avoid (optional)")
 # Edge cases
 warnings = []
 
+# Validate mandatory fields
 if not destination:
     warnings.append("Please specify a destination for your trip.")
 if trip_duration < 1:
     warnings.append("Trip duration should be at least 1 day.")
-if accommodation == "Luxury" and budget == "Low":
-    warnings.append("Your selected accommodation preference (Luxury) might not align with a low budget. Please reconsider.")
-if not dietary_preferences and mobility == "High Tolerance":
-    warnings.append("Consider specifying dietary preferences if you have special requirements.")
+if not budget:
+    warnings.append("Please specify your budget.")
+if not trip_type:
+    warnings.append("Please select a trip type.")
 
 # Display warnings
 if warnings:
@@ -53,70 +54,84 @@ if warnings:
 # Button to confirm inputs and generate itinerary
 if st.button("Generate Itinerary"):
 
-    # Refinement Prompt to validate inputs
-    refinement_prompt = f"""
-    Destination: {destination}
-    Duration: {trip_duration} days
-    Budget: {budget}
-    Trip Type: {trip_type}
-    Dietary Preferences: {dietary_preferences if dietary_preferences else 'None'}
-    Mobility Concerns: {mobility}
-    Accommodation: {accommodation}
-    Seasonal Preferences: {seasonal_preferences}
-    Areas to Avoid: {avoid_areas if avoid_areas else 'None'}
+    if warnings:
+        st.warning("Please address the issues above before generating the itinerary.")
+    else:
+        # System Prompt
+        system_prompt = f"""
+        You are a highly efficient AI assistant tasked with creating personalized itineraries for travelers. Your goal is to ensure that each itinerary is:
+        - Well-organized, with clear morning, afternoon, and evening activities.
+        - Tailored to the user's preferences (e.g., trip type, budget, dietary restrictions, etc.).
+        - Engaging, including unique local experiences and hidden gems.
+        - Respectful of the user's mobility concerns and seasonal preferences.
+        - Concise, easy to follow, and aligned with the user's duration and budget.
+        Always consider any user input provided (e.g., destination, trip duration, etc.), and refine the trip plan accordingly.
+        """
 
-    Please refine these inputs to ensure they are clear, actionable, and consistent. Clarify any contradictions or vague details (e.g., 'low budget' with 'luxury accommodation'). Based on this, suggest improvements or considerations to enhance the trip plan.
-    """
+        # Refinement Prompt
+        refinement_prompt = f"""
+        Destination: {destination}
+        Duration: {trip_duration} days
+        Budget: {budget}
+        Trip Type: {trip_type}
+        Dietary Preferences: {dietary_preferences if dietary_preferences else 'None'}
+        Mobility Concerns: {mobility}
+        Accommodation: {accommodation}
+        Seasonal Preferences: {seasonal_preferences}
+        Areas to Avoid: {avoid_areas if avoid_areas else 'None'}
 
-    try:
-        with st.spinner("Refining your inputs..."):
-            refinement_response = co.generate(
-                model="command-xlarge-nightly",
-                prompt=refinement_prompt,
-                temperature=0.7,
-                max_tokens=4000
-            )
-            refined_inputs = refinement_response.generations[0].text.strip()
+        Please refine these inputs to ensure they are clear, actionable, and consistent. Clarify any contradictions or vague details (e.g., 'low budget' with 'luxury accommodation'). Based on this, suggest improvements or considerations to enhance the trip plan.
+        """
 
-        # Itinerary Generation
-        chunk_size = 5
-        num_chunks = (trip_duration // chunk_size) + (1 if trip_duration % chunk_size != 0 else 0)
-        itinerary = []
-
-        with st.spinner("Generating your itinerary..."):
-            for chunk in range(num_chunks):
-                start_day = chunk * chunk_size + 1
-                end_day = min((chunk + 1) * chunk_size, trip_duration)
-
-                # Chunk-specific prompt
-                itinerary_prompt = f"""
-                Create a personalized itinerary for {destination} from day {start_day} to day {end_day}. Include in concise manner:
-                - Morning activities, including recommendations for transportation.
-                - Afternoon activities with lunch recommendations.
-                - Evening activities with dinner recommendations.
-                - Highlight unique local experiences, fun activities, hidden gems, and top-rated landmarks.
-                - Ensure the itinerary aligns with a {budget} budget and the {trip_type} theme.
-                - Consider dietary preferences ({dietary_preferences}) and mobility concerns ({mobility}).
-                - Align with seasonal preferences ({seasonal_preferences}).
-                - Avoid {avoid_areas} if specified.
-                """
-
-                # Generate response
-                response = co.generate(
-                    model='command-xlarge-nightly',
-                    prompt=itinerary_prompt,
+        try:
+            with st.spinner("Refining your inputs..."):
+                refinement_response = co.generate(
+                    model="command-xlarge-nightly",
+                    prompt=system_prompt + "\n" + refinement_prompt,
                     temperature=0.7,
                     max_tokens=4000
                 )
+                refined_inputs = refinement_response.generations[0].text.strip()
 
-                # Append chunk to the full itinerary
-                itinerary.append(f"### Days {start_day}-{end_day}:\n" + response.generations[0].text.strip())
+            # Itinerary Generation
+            chunk_size = 5
+            num_chunks = (trip_duration // chunk_size) + (1 if trip_duration % chunk_size != 0 else 0)
+            itinerary = []
 
-        # Display final itinerary
-        st.header("Your Personalized Itinerary")
-        for chunk_text in itinerary:
-            st.write(chunk_text)
+            with st.spinner("Generating your itinerary..."):
+                for chunk in range(num_chunks):
+                    start_day = chunk * chunk_size + 1
+                    end_day = min((chunk + 1) * chunk_size, trip_duration)
 
-    except Exception as e:
-        # Display errors
-        st.error(f"An error occurred while generating the itinerary: {e}")
+                    # Chunk-specific prompt
+                    itinerary_prompt = f"""
+                    Create a personalized itinerary for {destination} from day {start_day} to day {end_day}. Include in concise manner:
+                    - Morning activities, including recommendations for transportation.
+                    - Afternoon activities with lunch recommendations.
+                    - Evening activities with dinner recommendations.
+                    - Highlight unique local experiences, fun activities, hidden gems, and top-rated landmarks.
+                    - Ensure the itinerary aligns with a {budget} budget and the {trip_type} theme.
+                    - Consider dietary preferences ({dietary_preferences}) and mobility concerns ({mobility}).
+                    - Align with seasonal preferences ({seasonal_preferences}).
+                    - Avoid {avoid_areas} if specified.
+                    """
+
+                    # Generate response
+                    response = co.generate(
+                        model='command-xlarge-nightly',
+                        prompt=itinerary_prompt,
+                        temperature=0.7,
+                        max_tokens=4000
+                    )
+
+                    # Append chunk to the full itinerary
+                    itinerary.append(f"### Days {start_day}-{end_day}:\n" + response.generations[0].text.strip())
+
+            # Display final itinerary
+            st.header("Your Personalized Itinerary")
+            for chunk_text in itinerary:
+                st.write(chunk_text)
+
+        except Exception as e:
+            # Display errors
+            st.error(f"An error occurred while generating the itinerary: {e}")
