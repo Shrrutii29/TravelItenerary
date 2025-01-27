@@ -74,6 +74,7 @@ if st.button("Generate Itinerary"):
                 model="command-xlarge-nightly",
                 prompt=refinement_prompt,
                 temperature=0.7,
+                max_tokens=4000
             )
             refined_inputs = refinement_response.generations[0].text.strip()
 
@@ -89,7 +90,7 @@ if st.button("Generate Itinerary"):
 
                 # Chunk-specific prompt
                 itinerary_prompt = f"""
-                Create a personalized itinerary for {destination} from day {start_day} to day {end_day}. Include:
+                Create a personalized itinerary for {destination} from day {start_day} to day {end_day}. Include in concise manner:
                 - Morning activities, including recommendations for transportation.
                 - Afternoon activities with lunch recommendations.
                 - Evening activities with dinner recommendations.
@@ -105,6 +106,7 @@ if st.button("Generate Itinerary"):
                     model='command-xlarge-nightly',
                     prompt=itinerary_prompt,
                     temperature=0.7,
+                    max_tokens=4000
                 )
 
                 # Append chunk to the full itinerary
@@ -116,4 +118,5 @@ if st.button("Generate Itinerary"):
             st.write(chunk_text)
 
     except Exception as e:
+        # Display errors
         st.error(f"An error occurred while generating the itinerary: {e}")
